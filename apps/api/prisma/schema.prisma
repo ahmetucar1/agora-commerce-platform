@@ -1,0 +1,253 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============= Users & Auth =============
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  phone         String?
+  passwordHash  String
+  firstName     String
+  lastName      String
+  role          UserRole   @default(CUSTOMER)
+  status        UserStatus @default(ACTIVE)
+  
+  addresses     Address[]
+  orders        Order[]
+  reviews       Review[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([email])
+  @@index([phone])
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BANNED
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  street    String
+  city      String
+  district  String
+  zipCode   String
+  country   String
+  isDefault Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ============= Products & Catalog =============
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  image       String?
+  parentId    String?
+  parent      Category?  @relation("CategoryParent", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryParent")
+  
+  products    Product[]
+  status      Status     @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([slug])
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  sku           String    @unique
+  description   String?
+  shortDesc     String?
+  
+  categoryId    String
+  category      Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  
+  price         Decimal   @db.Decimal(10, 2)
+  costPrice     Decimal   @db.Decimal(10, 2)
+  
+  stock         Int       @default(0)
+  weight        Decimal   @db.Decimal(8, 2)
+  
+  images        ProductImage[]
+  attributes    ProductAttribute[]
+  inventory     InventoryMovement[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+  
+  status        Status    @default(ACTIVE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([slug])
+  @@index([sku])
+  @@index([categoryId])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  url       String
+  alt       String?
+  order     Int      @default(0)
+  
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+model ProductAttribute {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  key       String
+  value     String
+  
+  @@unique([productId, key])
+  @@index([productId])
+}
+
+// ============= Inventory =============
+model InventoryMovement {
+  id        String               @id @default(cuid())
+  productId String
+  product   Product              @relation(fields: [productId], references: [id])
+  
+  type      InventoryMovementType
+  quantity  Int
+  notes     String?
+  
+  createdAt DateTime             @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+enum InventoryMovementType {
+  IN       // Giriş (satın alma)
+  OUT      // Çıkış (satış)
+  ADJUST   // Ayarlama (envanter düzeltmesi)
+  RETURN   // İade
+  DAMAGE   // Hasar
+}
+
+// ============= Orders =============
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  
+  items         OrderItem[]
+  subtotal      Decimal     @db.Decimal(12, 2)
+  tax           Decimal     @db.Decimal(12, 2)
+  shipping      Decimal     @db.Decimal(12, 2)
+  total         Decimal     @db.Decimal(12, 2)
+  
+  shippingAddress String    // JSON
+  billingAddress  String    // JSON
+  
+  status        OrderStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentMethod String?
+  
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([status])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  
+  quantity  Int
+  price     Decimal  @db.Decimal(10, 2)
+  total     Decimal  @db.Decimal(12, 2)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// ============= Reviews =============
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  rating    Int      // 1-5
+  title     String
+  content   String?
+  
+  status    Status   @default(ACTIVE)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([userId])
+}
+
+// ============= Common Enums =============
+enum Status {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
