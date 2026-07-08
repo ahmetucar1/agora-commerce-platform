@@ -1,0 +1,30 @@
+{
+  "name": "agora-commerce-platform",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w apps/web",
+    "dev:api": "npm run start:dev -w apps/api",
+    "build:web": "npm run build -w apps/web",
+    "build:api": "npm run build -w apps/api",
+    "lint:web": "npm run lint -w apps/web",
+    "lint:api": "npm run lint -w apps/api"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "agora",
+    "ecommerce",
+    "nextjs",
+    "nestjs",
+    "monorepo"
+  ],
+  "author": "Agora Sarkuteri",
+  "license": "UNLICENSED",
+  "description": "Agora Sarkuteri production-grade ecommerce monorepo"
+}
