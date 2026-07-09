@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: agora-api
+    runtime: node
+    rootDir: apps/api
+    buildCommand: npm install && npm run build && npx prisma generate
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: postgresql://postgres.pcynuniqoeiycqbxhgkm:Allahvar.2121@aws-0-eu-west-1.pooler.supabase.com:5432/postgres
+      - key: JWT_SECRET
+        value: agora-jwt-secret-2024-production
+      - key: JWT_REFRESH_SECRET
+        value: agora-refresh-secret-2024-production
+      - key: API_PORT
+        value: 3000
